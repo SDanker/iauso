@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "generated_at": 1788810300.0,
+  "demo": true,
+  "providers": {
+    "claude": {
+      "status": "ok",
+      "updated_at": 1788810300.0,
+      "windows": [
+        {
+          "id": "session",
+          "label": "5 h",
+          "used_percent": 74,
+          "resets_at": 1788817500.0
+        },
+        {
+          "id": "weekly_all",
+          "label": "7 d",
+          "used_percent": 92,
+          "resets_at": 1789069500.0
+        }
+      ]
+    },
+    "codex": {
+      "status": "ok",
+      "updated_at": 1788810300.0,
+      "windows": [
+        {
+          "id": "primary",
+          "label": "5 h",
+          "used_percent": 42,
+          "resets_at": 1788817500.0
+        },
+        {
+          "id": "secondary",
+          "label": "7 d",
+          "used_percent": 18,
+          "resets_at": 1789069500.0
+        }
+      ]
+    }
+  }
+}

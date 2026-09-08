@@ -1,0 +1,21 @@
+{
+  "source": "local",
+  "timezone": "America/Santiago",
+  "language": "en",
+  "display": "epd",
+  "panel": "2.15g",
+  "rotation": 0,
+  "state_dir": "~/.local/state/iauso",
+  "snapshot_file": "~/.local/state/iauso/inbox.json",
+  "poll_seconds": 300,
+  "min_refresh_seconds": 180,
+  "stale_after_seconds": 900,
+  "http_timeout_seconds": 15,
+  "busy_timeout_seconds": 60,
+  "claude": {"enabled": true, "credentials_file": "", "keychain_service": ""},
+  "codex": {"enabled": true, "credentials_file": ""},
+  "claude_windows": ["session", "weekly_all"],
+  "codex_windows": ["primary", "secondary"],
+  "warn_percent": 70,
+  "crit_percent": 90
+}

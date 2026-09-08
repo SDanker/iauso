@@ -1,0 +1,14 @@
+{
+  "source": "api",
+  "api_url": "https://cuotas.example.com/v1/usage",
+  "api_token_file": "~/.config/iauso/api-token",
+  "api_allow_http": false,
+  "timezone": "America/Santiago",
+  "language": "en",
+  "poll_seconds": 300,
+  "stale_after_seconds": 900,
+  "display": "epd",
+  "panel": "2.15g",
+  "warn_percent": 70,
+  "crit_percent": 90
+}

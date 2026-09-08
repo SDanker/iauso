@@ -1,0 +1,9 @@
+{
+  "source": "local",
+  "display": "png",
+  "state_dir": "/state",
+  "poll_seconds": 300,
+  "stale_after_seconds": 900,
+  "claude": {"enabled": true, "credentials_file": "/credentials/claude/.credentials.json"},
+  "codex": {"enabled": true, "credentials_file": "/credentials/codex/auth.json"}
+}

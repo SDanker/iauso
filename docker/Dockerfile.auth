@@ -1,0 +1,21 @@
+# Herramientas oficiales solo para login interactivo en el servidor.
+# Las CLI no se ejecutan en la Raspberry ni quedan corriendo en este contenedor.
+FROM node:24-bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates git \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir /opt/cli \
+    && chown node:node /opt/cli
+ENV NPM_CONFIG_PREFIX=/opt/cli PATH=/opt/cli/bin:$PATH \
+    CODEX_HOME=/home/node/.codex CLAUDE_CONFIG_DIR=/home/node/.claude \
+    DISABLE_AUTOUPDATER=1
+USER node
+# Se pueden fijar versiones usando --build-arg. El valor por defecto se
+# resuelve al construir; para actualizar hay que reconstruir esta imagen.
+ARG CODEX_VERSION=latest
+ARG CLAUDE_VERSION=latest
+RUN npm install --global "@openai/codex@${CODEX_VERSION}" "@anthropic-ai/claude-code@${CLAUDE_VERSION}" \
+    && npm cache clean --force
+WORKDIR /home/node
+CMD ["bash"]

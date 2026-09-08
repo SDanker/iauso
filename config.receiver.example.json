@@ -1,0 +1,9 @@
+{
+  "source": "file",
+  "timezone": "America/Santiago",
+  "language": "en",
+  "display": "epd",
+  "panel": "2.15g",
+  "rotation": 0,
+  "snapshot_file": "~/.local/state/iauso/inbox.json"
+}
