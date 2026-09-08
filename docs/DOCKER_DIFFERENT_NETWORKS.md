@@ -164,7 +164,7 @@ installed on the Zero 2 W.
 ### A5. Start and check Docker
 
 ```bash
-sudo docker compose up -d collector api
+sudo docker compose up -d collector api refresher
 sudo docker compose ps
 sudo docker compose logs --tail=30 collector api
 ```

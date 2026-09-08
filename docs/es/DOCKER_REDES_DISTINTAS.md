@@ -123,7 +123,7 @@ El contenedor temporal `auth` se elimina al terminar el comando, pero sus sesion
 ### A5. Arrancar y comprobar Docker
 
 ```bash
-sudo docker compose up -d collector api
+sudo docker compose up -d collector api refresher
 sudo docker compose ps
 sudo docker compose logs --tail=30 collector api
 ```

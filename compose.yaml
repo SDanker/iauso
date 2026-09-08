@@ -64,6 +64,31 @@ services:
     volumes:
       - ./server-data/home:/home/node
 
+  # Renews the provider sessions before they expire, using the same image and
+  # the same credentials volume as "auth". It needs no Docker socket and no
+  # scheduler on the host: the loop lives inside the container. A refresh was
+  # measured to fit in 512 MB, hence the modest limit.
+  refresher:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.auth
+    command: [bash, /app/scripts/refresh_loop.sh]
+    user: "1000:1000"
+    init: true
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    memswap_limit: 1g
+    volumes:
+      - ./server-data/home:/home/node
+      - ./scripts/refresh_loop.sh:/app/scripts/refresh_loop.sh:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "2m"
+        max-file: "3"
+
 secrets:
   api_token:
     file: ./secrets/api-token

@@ -8,6 +8,7 @@ Versión 1.1. El servidor consulta Claude y Codex aproximadamente cada cinco min
 |---|---|---|
 | `collector`, en Docker | Consulta y guarda las cuotas | Sesiones de Claude Code y Codex, montadas solo para lectura |
 | `api`, en Docker | Sirve la última lectura mediante HTTP | JSON de cuotas y una clave propia del panel |
+| `refresher`, en Docker | Renueva las sesiones antes de que expiren, ejecutando las CLI oficiales | Las mismas sesiones, montadas con escritura |
 | `auth`, contenedor temporal | Inicia o renueva sesiones usando las CLI oficiales | Tus inicios de sesión, con almacenamiento persistente en el servidor |
 | Raspberry | Consulta la API y dibuja la pantalla | Clave propia del panel y porcentajes/fechas/estados |
 
@@ -102,7 +103,7 @@ sudo docker compose run --rm collector python -m iauso doctor --config /app/dock
 Arranca los servicios permanentes:
 
 ```bash
-sudo docker compose up -d collector api
+sudo docker compose up -d collector api refresher
 sudo docker compose ps
 sudo docker compose logs --tail=30 collector api
 ```
@@ -217,7 +218,38 @@ sudo docker compose logs --tail=50 collector api
 
 Cada equipo tiene su propio ciclo de unos cinco minutos. Una lectura puede demorarse cerca de dos ciclos en llegar al panel. Se marca antigua después de 15 minutos sin una consulta correcta. La hora del JSON no se reemplaza por la hora de la petición HTTP. Si falta Internet, se conservan los valores previos con su fecha y estado de error; no se reemplazan por 0 %.
 
-**Las sesiones no se renuevan por el solo hecho de tener Docker encendido.** El recolector solo las lee. Cuando aparezca `RENOVAR SESION`, repite el login del proveedor correspondiente en el servidor:
+### Mantener las sesiones vivas
+
+**Las sesiones no se renuevan por el solo hecho de tener Docker encendido.** El recolector solo las lee; renovarlas es tarea de las CLI oficiales, y en un servidor dedicado nadie las ejecuta nunca. El access token de Claude dura unas **8 horas** (el de Codex, unos 10 días), así que sin ayuda el panel queda mostrando `RENOVAR SESION` pocas horas después de cada login.
+
+El servicio **`refresher`** cierra ese hueco, y arranca junto con el resto del stack:
+
+```bash
+sudo docker compose up -d collector api refresher
+```
+
+Ejecuta `scripts/refresh_loop.sh` dentro de la misma imagen que tiene las CLI, con el mismo volumen de credenciales, así que **no necesita el socket de Docker ni un planificador en el host** — funciona igual en Linux, macOS o Windows. Cada 30 minutos lee la expiración local (gratis, sin red) y solo cuando a un token le queda poco ejecuta una vez la CLI oficial, que refresca el token como efecto secundario. Después relee el archivo para confirmar que ocurrió. No se reimplementa nada: los archivos de credenciales los sigue escribiendo únicamente su propia CLI.
+
+```bash
+sudo docker compose logs refresher
+```
+
+```
+2026-09-08T13:49:20Z claude: 7 h left, nothing to do
+2026-09-08T13:49:20Z codex: 225 h left, nothing to do
+```
+
+Para comprobarlo a mano sin esperar a la próxima pasada:
+
+```bash
+sudo docker compose run --rm -T refresher bash /app/scripts/refresh_loop.sh --once
+```
+
+El refresco de Claude ejecuta un prompt de una palabra, porque es la única llamada que se comprobó que dispara la renovación (`claude auth status` lee el archivo sin renovar nada). Cuesta una porción despreciable de cuota, unas pocas veces al día. El de Codex usa `codex exec`, por lo mismo: `codex login status` también resultó ser de solo lectura. Codex no se pudo probar cerca de la expiración (su token dura ~10 días), así que esa parte es por analogía; si alguna vez no renueva, el log lo dice. El ritmo se ajusta con `REFRESH_INTERVAL_SECONDS`, `CLAUDE_MARGIN_HOURS` y `CODEX_MARGIN_HOURS`.
+
+Cuando caduca el propio refresh token, ninguna automatización sirve: el log dice `sign in again` y hay que volver a iniciar sesión con los comandos de abajo.
+
+Cuando aparezca `RENOVAR SESION`, repite el login del proveedor correspondiente en el servidor:
 
 ```bash
 sudo docker compose --profile auth run --rm auth codex login --device-auth

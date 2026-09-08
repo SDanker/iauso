@@ -185,6 +185,44 @@ API (HTTPS with Tailscale, a proxy, a Cloudflare Tunnel, etc.), taking the key t
 the Raspberry Pi and configuring `config.json` there, is identical — the Pi
 neither knows nor cares whether the server runs in Docker.
 
+## Keeping the sessions alive
+
+The collector only reads credentials; renewing them is the official CLIs' job.
+The Claude access token lasts about **8 hours** (Codex's, about 10 days), so on
+a server where nobody ever runs those CLIs the panel gets stuck on
+`RENEW SESSION` a few hours after every login.
+
+With Docker this is handled by the `refresher` service. Here, run the same loop
+from a timer, as the user that owns the sessions:
+
+```ini
+# /etc/systemd/system/iauso-refresh.service
+[Unit]
+Description=Renew the iauso provider sessions
+[Service]
+Type=oneshot
+User=YOUR_USER
+Environment=CLAUDE_CONFIG_DIR=/home/YOUR_USER/.claude
+Environment=CLAUDE_CREDENTIALS=/home/YOUR_USER/.claude/.credentials.json
+Environment=CODEX_CREDENTIALS=/home/YOUR_USER/.codex/auth.json
+ExecStart=/usr/bin/bash /home/YOUR_USER/iauso/scripts/refresh_loop.sh --once
+```
+
+```ini
+# /etc/systemd/system/iauso-refresh.timer
+[Unit]
+Description=Renew the iauso provider sessions periodically
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=30min
+[Install]
+WantedBy=timers.target
+```
+
+```bash
+sudo systemctl enable --now iauso-refresh.timer
+```
+
 ## Rotating the panel key
 
 Without `scripts/init_server.py` (designed for Docker/UID 1000), rotate it by

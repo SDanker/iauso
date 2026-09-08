@@ -15,6 +15,7 @@ number of provider queries.
 |---|---|---|
 | `collector`, in Docker | Queries and stores the quota | Claude Code and Codex sessions, mounted read-only |
 | `api`, in Docker | Serves the last reading over HTTP | Quota JSON and the panel key |
+| `refresher`, in Docker | Renews the sessions before they expire, by running the official CLIs | The same sessions, mounted read-write |
 | `auth`, temporary container | Starts or renews sessions using the official CLIs | Your logins, stored persistently on the server |
 | Raspberry Pi | Queries the API and draws the display | Panel key and percentages/dates/statuses |
 
@@ -143,7 +144,7 @@ it is checked in the next step.
 Start the permanent services:
 
 ```bash
-sudo docker compose up -d collector api
+sudo docker compose up -d collector api refresher
 sudo docker compose ps
 sudo docker compose logs --tail=30 collector api
 ```
@@ -292,8 +293,56 @@ successful query. The JSON time is not replaced by the HTTP request time. If the
 Internet is down, previous values are kept with their date and error status;
 they are not replaced by 0 %.
 
+### Keeping the sessions alive
+
 **Sessions are not renewed just because Docker is running.** The collector only
-reads them. When `RENOVAR SESION` appears, repeat the corresponding provider
+reads them; renewing is the official CLIs' job, and on a dedicated server
+nobody ever runs those CLIs. The Claude access token lasts about **8 hours**
+(Codex's, about 10 days), so without help the panel gets stuck showing
+`RENEW SESSION` a few hours after every login.
+
+The **`refresher`** service closes that gap, and it is started with the rest of
+the stack:
+
+```bash
+sudo docker compose up -d collector api refresher
+```
+
+It runs `scripts/refresh_loop.sh` inside the same image that holds the CLIs,
+with the same credentials volume, so it needs no Docker socket and no scheduler
+on the host — it works the same on Linux, macOS or Windows. Every 30 minutes it
+reads the local expiry (free, no network) and only when a token is about to run
+out does it run the official CLI once, which refreshes the token as a side
+effect. Then it re-reads the file to confirm the refresh happened. Nothing else
+is reimplemented: the credential files are still written only by their own CLI.
+
+```bash
+sudo docker compose logs refresher
+```
+
+```
+2026-09-08T13:49:20Z claude: 7 h left, nothing to do
+2026-09-08T13:49:20Z codex: 225 h left, nothing to do
+```
+
+To check it by hand without waiting for the next pass:
+
+```bash
+sudo docker compose run --rm -T refresher bash /app/scripts/refresh_loop.sh --once
+```
+
+The Claude refresh runs a one-word prompt, because that is the only call proven
+to trigger the renewal (`claude auth status` reads the file without renewing).
+It costs a negligible slice of quota a few times a day. The Codex refresh uses
+`codex exec`, for the same reason: `codex login status` was also verified to
+be read-only. Codex was not tested near expiry (its token lasts ~10 days), so
+that part is by analogy - if it ever fails to renew, the log says so. Tune the pace with
+`REFRESH_INTERVAL_SECONDS`, `CLAUDE_MARGIN_HOURS` and `CODEX_MARGIN_HOURS`.
+
+When a refresh token itself expires, no automation can help: the log says
+`sign in again` and you use the login commands below.
+
+When `RENOVAR SESION` appears, repeat the corresponding provider
 login on the server:
 
 ```bash
